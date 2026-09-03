@@ -1,0 +1,62 @@
+{
+    "author": "Parsley_fz8",
+    "dependencies": {
+        "@rebble/clay": "^1.0.10"
+    },
+    "keywords": [],
+    "name": "chidori-ashi",
+    "pebble": {
+        "capabilities": [
+            "location",
+            "configurable"
+        ],
+        "displayName": "Chidori-ashi",
+        "enableMultiJS": true,
+        "messageKeys": [
+            "KEY_STATION",
+            "KEY_DEST",
+            "KEY_HOUR",
+            "KEY_MIN",
+            "KEY_TYPE_TEXT",
+            "KEY_TIMELINE_RESULT",
+            "KEY_REQUEST_ADD_TIMELINE",
+            "KEY_REQUEST_PREV",
+            "KEY_REQUEST_NEXT",
+            "KEY_REQUEST_SWITCH",
+            "KEY_ALARM_MINUTES_BEFORE"
+        ],
+        "projectType": "native",
+        "resources": {
+            "media": [
+                {
+                    "file": "images/ICON",
+                    "menuIcon": true,
+                    "name": "icon",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "data/Alarm",
+                    "name": "ALARM_CLOCK",
+                    "targetPlatforms": null,
+                    "type": "raw"
+                }
+            ]
+        },
+        "sdkVersion": "3",
+        "targetPlatforms": [
+            "aplite",
+            "basalt",
+            "chalk",
+            "diorite",
+            "emery",
+            "gabbro",
+            "flint"
+        ],
+        "uuid": "cb3fd9af-64c8-4e33-9eaa-afae80db39c4",
+        "watchapp": {
+            "watchface": false
+        }
+    },
+    "version": "1.0.0"
+}

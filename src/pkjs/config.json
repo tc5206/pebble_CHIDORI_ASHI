@@ -1,0 +1,61 @@
+[
+  {
+    "type": "heading",
+    "id": "main-heading",
+    "defaultValue": "Chidori-ashi Settings"
+  },
+  {
+    "type": "section",
+    "items": [
+      {
+        "type": "heading",
+        "defaultValue": "API Configuration"
+      },
+      {
+        "type": "input",
+        "messageKey": "TRANSIT_API_URL",
+        "defaultValue": "https://api.transit.ls8h.com",
+        "label": "API Base URL",
+        "attributes": {
+          "placeholder": "https://api.transit.ls8h.com",
+          "type": "url"
+        }
+      },
+      {
+        "type": "input",
+        "messageKey": "DESTINATION_STATION_ID",
+        "defaultValue": "scrape-jreast-keihin-tohoku:odpt.Station:JR-East.KeihinTohokuNegishi.Tokyo",
+        "label": "Destination Station ID",
+        "description": "odpt.Station",
+        "attributes": {
+          "placeholder": "scrape-jreast-keihin-tohoku:odpt.Station:JR-East.KeihinTohokuNegishi.Tokyo"
+        }
+      },
+      {
+        "type": "input",
+        "messageKey": "ARRIVAL_SEARCH_TIME",
+        "defaultValue": "25:05",
+        "label": "Arrival Search Time",
+        "description": "HH:MM, e.g. 25:05",
+        "attributes": {
+          "placeholder": "25:05"
+        }
+      },
+      {
+        "type": "input",
+        "messageKey": "ALARM_MINUTES_BEFORE",
+        "defaultValue": "30",
+        "label": "Alarm Minutes Before",
+        "description": "Minutes before departure",
+        "attributes": {
+          "placeholder": "30",
+          "type": "number"
+        }
+      }
+    ]
+  },
+  {
+    "type": "submit",
+    "defaultValue": "Save Settings"
+  }
+]
