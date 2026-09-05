@@ -915,6 +915,16 @@ function addCurrentTrainToTimeline() {
 
   if (transitLeg.departureSecs !== undefined) {
     departureDate = new Date();
+
+    /*
+     * サービス日の基準は通常「当日0:00」だが、
+     * 現在時刻が0:00〜3:59の場合は前日サービス日の
+     * 継続時間帯とみなし、基準日を前日にずらす。
+     */
+    if (departureDate.getHours() < 4) {
+      departureDate.setDate(departureDate.getDate() - 1);
+    }
+
     departureDate.setHours(0, 0, 0, 0);
     departureDate.setTime(departureDate.getTime() + (parseInt(transitLeg.departureSecs, 10) * 1000));
   } else if (transitLeg.startTime) {

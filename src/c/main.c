@@ -19,6 +19,20 @@ static time_t s_alarm_time = 0;
 static int s_alarm_minutes_before = 30;
 
 /*
+ * 現在アラームがセットされている対象の電車(時・分)。
+ * 表示中の電車と一致するかどうかで
+ * 「トグルOFF」か「別の電車へ張り替え」かを判定する。
+ */
+static int s_alarmed_hour = -1;
+static int s_alarmed_min = -1;
+
+/*
+ * wakeup_cancel() は wakeup_schedule() の戻り値である WakeupId を
+ * 必要とする(cookie値ではない)。この実際のIDを保持しておく。
+ */
+static WakeupId s_wakeup_id = -1;
+
+/*
  * 「終電30分前」到達時に出すアラーム画面。
  *
  * up  = 5分スヌーズ
@@ -135,13 +149,20 @@ static void alarm_stop_vibrating(void) {
 }
 
 static void alarm_stop(void) {
+  wakeup_cancel(s_wakeup_id);
+  s_wakeup_id = -1;
   alarm_stop_vibrating();
 
   s_alarm_set = false;
   s_alarm_time = 0;
+  s_alarmed_hour = -1;
+  s_alarmed_min = -1;
 
   persist_write_bool(1, false);
   persist_write_int(2, 0);
+  persist_write_int(3, -1);
+  persist_write_int(4, -1);
+  persist_write_int(5, -1);
 
   request_timeline_action(3, 0);
 
@@ -155,14 +176,22 @@ static void alarm_snooze(void) {
   alarm_stop_vibrating();
 
   time_t new_alarm_time = time(NULL) + ALARM_SNOOZE_SECONDS;
-  wakeup_cancel(ALARM_WAKEUP_COOKIE);
+  wakeup_cancel(s_wakeup_id);
 
-  if (wakeup_schedule(new_alarm_time, ALARM_WAKEUP_COOKIE, true)) {
+  WakeupId new_wakeup_id =
+    wakeup_schedule(new_alarm_time, ALARM_WAKEUP_COOKIE, true);
+
+  if (new_wakeup_id >= 0) {
+    s_wakeup_id = new_wakeup_id;
     s_alarm_set = true;
     s_alarm_time = new_alarm_time;
     persist_write_bool(1, true);
     persist_write_int(2, (int32_t)new_alarm_time);
+    persist_write_int(5, (int32_t)s_wakeup_id);
     request_timeline_action(2, new_alarm_time);
+  } else {
+    s_wakeup_id = -1;
+    persist_write_int(5, -1);
   }
 
   if (s_alarm_window && window_stack_get_top_window() == s_alarm_window) {
@@ -267,41 +296,83 @@ static void show_alarm_window(void) {
 }
 
 static void wakeup_handler(WakeupId id, int32_t reason) {
-  if (id != ALARM_WAKEUP_COOKIE) return;
+  if (reason != ALARM_WAKEUP_COOKIE) return;
 
+  s_wakeup_id = -1;
   s_alarm_set = false;
   s_alarm_time = 0;
+  s_alarmed_hour = -1;
+  s_alarmed_min = -1;
   persist_write_bool(1, false);
   persist_write_int(2, 0);
+  persist_write_int(3, -1);
+  persist_write_int(4, -1);
+  persist_write_int(5, -1);
 
   request_timeline_action(3, 0);
   show_alarm_window();
 }
 
 static void toggle_alarm(void) {
-  if (!s_data_received || s_target_hour < 0) {
-    show_toast("No train");
-    return;
-  }
+  /*
+   * 現在有効な(エラーでない)電車が表示されているか。
+   */
+  bool have_current_train = (s_data_received && s_target_hour >= 0);
 
-  if (s_alarm_set) {
-    wakeup_cancel(ALARM_WAKEUP_COOKIE);
+  /*
+   * s_target_hour は午前0～3時の終電の場合、
+   * 24～27時として保持されている。
+   */
+  int departure_hour = have_current_train ? (s_target_hour % 24) : 0;
+
+  /*
+   * 「同じ電車への長押し」判定。
+   *
+   * ・表示中の電車がセット済みアラームの対象と一致する場合 → 同じ電車
+   * ・表示がエラー("No Rail Route"等)の場合は、比較のしようがないため
+   *   既存アラームがあるならとにかく解除できるようにする
+   *   (軽微な要望: エラー表示中でもアラーム解除は常にできてほしい)
+   */
+  bool same_train =
+    s_alarm_set &&
+    (!have_current_train ||
+     (s_alarmed_hour == departure_hour && s_alarmed_min == s_target_min));
+
+  if (s_alarm_set && same_train) {
+    wakeup_cancel(s_wakeup_id);
+    s_wakeup_id = -1;
     s_alarm_set = false;
     s_alarm_time = 0;
+    s_alarmed_hour = -1;
+    s_alarmed_min = -1;
     persist_write_bool(1, false);
     persist_write_int(2, 0);
+    persist_write_int(3, -1);
+    persist_write_int(4, -1);
+    persist_write_int(5, -1);
     request_timeline_action(3, 0);
     show_toast("Alarm OFF");
     return;
   }
 
+  if (!have_current_train) {
+    /*
+     * 解除すべき既存アラームも無く、
+     * 表示中の電車も無い(エラー状態)。
+     */
+    show_toast("No train");
+    return;
+  }
+
+  /*
+   * ここに来るのは:
+   *   (a) アラーム未セット、かつ有効な電車が表示されている → 新規セット
+   *   (b) アラームは「別の」電車に対してセット済み        → 張り替え
+   */
+  bool was_replacing = s_alarm_set;
+
   time_t now = time(NULL);
   struct tm departure_tm = *localtime(&now);
-  /*
-   * s_target_hour は午前0～3時の終電の場合、
-   * 24～27時として保持されている。
-   */
-  int departure_hour = s_target_hour % 24;
 
   departure_tm.tm_hour = departure_hour;
   departure_tm.tm_min = s_target_min;
@@ -320,10 +391,14 @@ static void toggle_alarm(void) {
   //ここで乗車x分前のアラームを指示している
 
   /*
-   * 30分前がすでに過ぎている場合。
+   * x分前がすでに過ぎている場合。
    *
    * アラームは設定せず、
    * 現在の終電をTimelineへ登録する。
+   *
+   * 注意: この分岐に入った場合、以前「別の電車」に対して
+   * セットされていたアラームがもし残っていても、ここでは
+   * キャンセルしない(即時ピン追加と既存アラームは別物として扱う)。
    */
   if (alarm_time <= now) {
     request_train(MESSAGE_KEY_KEY_REQUEST_ADD_TIMELINE);
@@ -331,16 +406,26 @@ static void toggle_alarm(void) {
     return;
   }
 
-  wakeup_cancel(ALARM_WAKEUP_COOKIE);
+  wakeup_cancel(s_wakeup_id);
 
-  if (wakeup_schedule(alarm_time, ALARM_WAKEUP_COOKIE, true)) {
+  WakeupId new_wakeup_id =
+    wakeup_schedule(alarm_time, ALARM_WAKEUP_COOKIE, true);
+
+  if (new_wakeup_id >= 0) {
+    s_wakeup_id = new_wakeup_id;
     s_alarm_set = true;
     s_alarm_time = alarm_time;
+    s_alarmed_hour = departure_hour;
+    s_alarmed_min = s_target_min;
     persist_write_bool(1, true);
     persist_write_int(2, (int32_t)alarm_time);
+    persist_write_int(3, s_alarmed_hour);
+    persist_write_int(4, s_alarmed_min);
+    persist_write_int(5, (int32_t)s_wakeup_id);
     request_timeline_action(2, alarm_time);
-    show_toast("Alarm ON");
+    show_toast(was_replacing ? "Alarm Updated" : "Alarm ON");
   } else {
+    s_wakeup_id = -1;
     show_toast("Alarm Error");
   }
 }
@@ -663,12 +748,39 @@ static void init() {
     s_alarm_time = (time_t)persist_read_int(2);
 
     if (s_alarm_set && s_alarm_time > time(NULL)) {
-      wakeup_schedule(s_alarm_time, ALARM_WAKEUP_COOKIE, true);
+      /*
+       * wakeup_schedule() で登録した予約はアプリプロセスの
+       * 再起動をまたいでOS側に残り続けるため、ここで再度
+       * wakeup_schedule() を呼ぶと二重登録になってしまう。
+       * 前回保存しておいた WakeupId をそのまま復元するだけでよい。
+       *
+       * ただし、本修正より前のバージョンから移行してきた場合など
+       * WakeupIdが保存されていないケースに備え、その時だけ
+       * フォールバックとして改めてスケジュールする。
+       */
+      if (persist_exists(5)) {
+        s_wakeup_id = (WakeupId)persist_read_int(5);
+      } else {
+        s_wakeup_id =
+          wakeup_schedule(s_alarm_time, ALARM_WAKEUP_COOKIE, true);
+        persist_write_int(5, (int32_t)s_wakeup_id);
+      }
+
+      s_alarmed_hour =
+        persist_exists(3) ? persist_read_int(3) : -1;
+      s_alarmed_min =
+        persist_exists(4) ? persist_read_int(4) : -1;
     } else {
       s_alarm_set = false;
       s_alarm_time = 0;
+      s_alarmed_hour = -1;
+      s_alarmed_min = -1;
+      s_wakeup_id = -1;
       persist_write_bool(1, false);
       persist_write_int(2, 0);
+      persist_write_int(3, -1);
+      persist_write_int(4, -1);
+      persist_write_int(5, -1);
     }
   }
 
@@ -689,10 +801,16 @@ static void init() {
     int32_t woken_cookie = 0;
 
     if (wakeup_get_launch_event(&woken_id, &woken_cookie) && woken_cookie == ALARM_WAKEUP_COOKIE) {
+      s_wakeup_id = -1;
       s_alarm_set = false;
       s_alarm_time = 0;
+      s_alarmed_hour = -1;
+      s_alarmed_min = -1;
       persist_write_bool(1, false);
       persist_write_int(2, 0);
+      persist_write_int(3, -1);
+      persist_write_int(4, -1);
+      persist_write_int(5, -1);
       request_timeline_action(3, 0);
       show_alarm_window();
     }
