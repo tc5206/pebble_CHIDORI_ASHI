@@ -26,7 +26,7 @@
         "messageKey": "DESTINATION_STATION_ID",
         "defaultValue": "scrape-jreast-keihin-tohoku:odpt.Station:JR-East.KeihinTohokuNegishi.Tokyo",
         "label": "Destination Station ID",
-        "description": "odpt.Station",
+				"description": "...:odpt.Station:...",
         "attributes": {
           "placeholder": "scrape-jreast-keihin-tohoku:odpt.Station:JR-East.KeihinTohokuNegishi.Tokyo"
         }
