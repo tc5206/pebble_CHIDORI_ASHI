@@ -17,7 +17,8 @@
 ### アプリを使う前の下準備（App Settings）
 Settingsで設定する項目あり<br>
 APIで使う駅ID（自宅最寄駅の駅ID）を登録する<br>（例URL）[https://api.transit.ls8h.com/api/v1/locations/suggest?q=東京](https://api.transit.ls8h.com/api/v1/locations/suggest?q=東京)のように駅名を入れると<br>
-（例ID）`scrape-jreast-keihin-tohoku:odpt.Station:JR-East.KeihinTohokuNegishi.Tokyo`のように駅IDが出るので<br>それをDestination Station ID欄に貼る<br>
+`scrape-jreast-keihin-tohoku:odpt.Station:JR-East.KeihinTohokuNegishi.Tokyo`のように駅IDが出るので<br>その部分をコピーしてDestination Station ID欄に貼る<br>
+"`...:odpt.Station:...`"部分が駅ID<br>
 必ずSAVE SETTINGSで設定を反映させること
 #### 他にも設定できること
 - 終電が0:15着だけど一本早い電車で着きたい場合はArrival Search Time欄を24:14にすると0:14着以前の電車を探してくれる<br>もっと早い時間を設定することも可能
