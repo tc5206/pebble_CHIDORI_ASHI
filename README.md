@@ -29,5 +29,5 @@ APIで使う駅ID（自宅最寄駅の駅ID）を登録する<br>（例URL）[ht
 アラームをセットするとタイムラインに「終電30分前」と表示されるが、これを削除してもアラームは解除されない<br>アプリで`UP長押し`か`SELECT長押し`をしてアラームを解除する必要がある
 <br>アラーム鳴動時のアニメーションは公式アプリから借りたものです。怒られたら差し替えます
 # ダウンロード
-[Chidori-ashi.pbw v1.11](https://github.com/tc5206/pebble_CHIDORI_ASHI/blob/main/Chidori-ashi_114.pbw)
+[Chidori-ashi.pbw v1.14](https://github.com/tc5206/pebble_CHIDORI_ASHI/blob/main/Chidori-ashi_114.pbw)
 <br>サイドロードしてつかってね
