@@ -6,6 +6,7 @@
 - 検索結果は必ずしも正しいとは限らないので終電ギリギリを攻めすぎないように
 - アラーム鳴動時のアニメーションは公式が作ったタイマー鳴動時のアニメーションを流用した
 - 路線バスは検索対象外とした（鉄道よりも終バスが早い場合が多いため）
+- AI製
 ## なにができる？
 1. **飲み屋の最寄駅に着いた時点で**アプリを起動し
 2. 検索結果が出たら
@@ -14,7 +15,10 @@
 5. 登録が済んだらアプリは閉じてOK
 6. 終電の時間が近づいたらPebbleが教えてくれる！
 ### アプリを使う前の下準備（App Settings）
-APIで使う駅ID（自宅最寄駅の駅ID）を登録する<br>（例URL）[https://api.transit.ls8h.com/api/v1/locations/suggest?q=東京](https://api.transit.ls8h.com/api/v1/locations/suggest?q=東京)のように駅名を入れると<br>（例ID）`scrape-jreast-keihin-tohoku:odpt.Station:JR-East.KeihinTohokuNegishi.Tokyo`のように駅IDが出るので<br>それをDestination Station ID欄に貼る
+Settingsで設定する項目あり<br>
+APIで使う駅ID（自宅最寄駅の駅ID）を登録する<br>（例URL）[https://api.transit.ls8h.com/api/v1/locations/suggest?q=東京](https://api.transit.ls8h.com/api/v1/locations/suggest?q=東京)のように駅名を入れると<br>
+（例ID）`scrape-jreast-keihin-tohoku:odpt.Station:JR-East.KeihinTohokuNegishi.Tokyo`のように駅IDが出るので<br>それをDestination Station ID欄に貼る<br>
+必ずSAVE SETTINGSで設定を反映させること
 #### 他にも設定できること
 - 終電が0:15着だけど一本早い電車で着きたい場合はArrival Search Time欄を24:14にすると0:14着以前の電車を探してくれる<br>もっと早い時間を設定することも可能
 - デフォルトでは乗車30分前にアラームが鳴動するがAlarm Minutes Before欄を他の値に変更できる（単位：分）
