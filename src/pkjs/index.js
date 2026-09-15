@@ -24,7 +24,11 @@ var alarmMinutesBefore = 30;
  * ASCII-only diagnostic logging.
  * DO NOT log place.name or any other UTF-8 text here.
  */
-var DIAG_LOG = true;
+var DIAG_LOG = false;
+
+if (!DIAG_LOG) {
+  console.log = function() {};
+}
 /*
  * ============================================================
  * END DIAGNOSTIC LOG
