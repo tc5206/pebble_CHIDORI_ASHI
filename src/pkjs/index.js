@@ -18,12 +18,27 @@ var alarmMinutesBefore = 30;
 
 /*
  * ============================================================
+ * DIAGNOSTIC LOG - REMOVE BEFORE RELEASE
+ * ============================================================
+ *
+ * ASCII-only diagnostic logging.
+ * DO NOT log place.name or any other UTF-8 text here.
+ */
+var DIAG_LOG = true;
+/*
+ * ============================================================
+ * END DIAGNOSTIC LOG
+ * ============================================================
+ */
+
+/*
+ * ============================================================
  * Search settings
  * ============================================================
  */
-var SEARCH_RADIUS_METERS = 2000;
+var SEARCH_RADIUS_METERS = 2500;
 var REVERSE_RADIUS_METERS = 500;
-var GRID_SIZE = 7;
+var GRID_SIZE = 9;
 
 /*
  * ============================================================
@@ -212,7 +227,23 @@ function findNearestRailStation(baseUrl) {
 
   console.log("Station search requests=" + probes.length);
   var candidates = [];
-
+		
+/*
+ * ============================================================
+ * DIAGNOSTIC LOG - REMOVE BEFORE RELEASE
+ * ============================================================
+ */
+diagTotalPlaces = 0;
+diagTotalStations = 0;
+diagTotalRejectedDistance = 0;
+diagTotalEmptyResponses = 0;
+diagTotalErrors = 0;
+/*
+ * ============================================================
+ * END DIAGNOSTIC LOG
+ * ============================================================
+ */
+	
   function processBatch(startIndex) {
     if (startIndex >= probes.length) {
       selectNearestRailStation(candidates, baseUrl, originLat, originLon);
@@ -236,9 +267,56 @@ function findNearestRailStation(baseUrl) {
               if (!isFinite(stationLat) || !isFinite(stationLon)) continue;
 
               var distance = getDistanceMeters(originLat, originLon, stationLat, stationLon);
-              if (distance > SEARCH_RADIUS_METERS) continue;
+/*
+ * ============================================================
+ * DIAGNOSTIC LOG - REMOVE BEFORE RELEASE
+ * ============================================================
+ */
+if (distance > SEARCH_RADIUS_METERS) {
+  diagTotalRejectedDistance++;
 
-              candidates.push({
+  console.log(
+    "DIAG STATION rejected distance=" +
+    Math.round(distance) +
+    "m"
+  );
+
+  continue;
+}
+/*
+ * ============================================================
+ * END DIAGNOSTIC LOG
+ * ============================================================
+ */
+
+/*
+ * ============================================================
+ * DIAGNOSTIC LOG - REMOVE BEFORE RELEASE
+ * ============================================================
+ *
+ * IMPORTANT:
+ * station name is intentionally NOT logged.
+ *
+if (DIAG_LOG) {
+  console.log(
+    "DIAG STATION accepted distance=" +
+    Math.round(distance) +
+    "m" +
+    " lat=" +
+    stationLat.toFixed(5) +
+    " lon=" +
+    stationLon.toFixed(5) +
+    " id=" +
+    String(place.id || "").replace(/[^A-Za-z0-9:._-]/g, "")
+  );
+}
+/*
+ * ============================================================
+ * END DIAGNOSTIC LOG
+ * ============================================================
+ */
+
+							candidates.push({
                 reverseId: place.id || "",
                 name: place.name,
                 lat: stationLat,
@@ -261,27 +339,129 @@ function findNearestRailStation(baseUrl) {
 
 /*
  * ============================================================
+ * DIAGNOSTIC LOG - REMOVE BEFORE RELEASE
+ * ============================================================
+ */
+var diagTotalPlaces = 0;
+var diagTotalStations = 0;
+var diagTotalRejectedDistance = 0;
+var diagTotalEmptyResponses = 0;
+var diagTotalErrors = 0;
+/*
+ * ============================================================
+ * END DIAGNOSTIC LOG
+ * ============================================================
+ */
+
+/*
+ * ============================================================
  * places/reverse
  * ============================================================
  */
 function requestReversePlaces(baseUrl, lat, lon, callback) {
-  var url = baseUrl + "/api/v1/places/reverse?lat=" + encodeURIComponent(lat) + "&lon=" + encodeURIComponent(lon) + "&limit=10&radiusMeters=" + REVERSE_RADIUS_METERS;
+  var url =
+    baseUrl +
+    "/api/v1/places/reverse?lat=" +
+    encodeURIComponent(lat) +
+    "&lon=" +
+    encodeURIComponent(lon) +
+    "&limit=10" +
+    "&radiusMeters=" +
+    REVERSE_RADIUS_METERS;
+
   var req = new XMLHttpRequest();
+
   req.open('GET', url, true);
+
   req.onload = function() {
     if (req.status !== 200) {
       callback([]);
       return;
     }
+
     try {
       var res = JSON.parse(req.responseText);
       var places = res.places || res.items || [];
-      callback(Array.isArray(places) ? places : []);
+
+      if (!Array.isArray(places)) {
+        places = [];
+      }
+
+       /*
+       * ========================================================
+       * DIAGNOSTIC LOG - REMOVE BEFORE RELEASE
+       * ========================================================
+       *
+       * Count only.
+       * NO console.log here.
+       * NO UTF-8 text is logged.
+       */
+      if (DIAG_LOG) {
+        diagTotalPlaces += places.length;
+
+        var stationCount = 0;
+
+        for (var d = 0; d < places.length; d++) {
+          var p = places[d];
+
+          if (p && p.kind === "station") {
+            stationCount++;
+          }
+        }
+
+        diagTotalStations += stationCount;
+
+        if (places.length === 0) {
+          diagTotalEmptyResponses++;
+        }
+      }
+      /*
+       * ========================================================
+       * END DIAGNOSTIC LOG
+       * ========================================================
+       */
+
+      callback(places);
+
     } catch (e) {
+
+      /*
+       * ========================================================
+       * DIAGNOSTIC LOG - REMOVE BEFORE RELEASE
+       * ========================================================
+       */
+      if (DIAG_LOG) {
+        diagTotalErrors++;
+      }
+      /*
+       * ========================================================
+       * END DIAGNOSTIC LOG
+       * ========================================================
+       */
+
       callback([]);
     }
   };
-  req.onerror = function() { callback([]); };
+
+  req.onerror = function() {
+
+    /*
+     * ============================================================
+     * DIAGNOSTIC LOG - REMOVE BEFORE RELEASE
+     * ============================================================
+     */
+    if (DIAG_LOG) {
+      diagTotalErrors++;
+    }
+    /*
+     * ============================================================
+     * END DIAGNOSTIC LOG
+     * ============================================================
+     */
+
+    callback([]);
+  };
+
   req.send();
 }
 
@@ -292,6 +472,33 @@ function requestReversePlaces(baseUrl, lat, lon, callback) {
  */
 function selectNearestRailStation(candidates, baseUrl, originLat, originLon) {
   console.log("Rail station candidates=" + candidates.length);
+
+  /*
+   * ============================================================
+   * DIAGNOSTIC LOG - REMOVE BEFORE RELEASE
+   * ============================================================
+   */
+  if (DIAG_LOG) {
+    console.log(
+      "DIAG SUMMARY places=" +
+      diagTotalPlaces +
+      " stations=" +
+      diagTotalStations +
+      " empty=" +
+      diagTotalEmptyResponses +
+			" errors=" +
+			diagTotalErrors +
+			" rejected=" +
+			diagTotalRejectedDistance +
+			" candidates=" +
+			candidates.length
+    );
+  }
+  /*
+   * ============================================================
+   * END DIAGNOSTIC LOG
+   * ============================================================
+   */
 
   if (!candidates || candidates.length === 0) {
     console.log("No railway station within 2km");
@@ -340,12 +547,11 @@ function selectNearestRailStation(candidates, baseUrl, originLat, originLon) {
     return;
   }
 
-  console.log("Selected station name=" + nearest.name);
   console.log("Selected station distance=" + Math.round(nearest.distance) + "m");
 
   resolveStationIds(baseUrl, nearest, function(stationIds) {
     if (!stationIds || stationIds.length === 0) {
-      console.log("No station IDs resolved for " + nearest.name);
+      console.log("No station IDs resolved");
       sendDataToPebble({ station: "No Rail Station", hour: -1, min: 0 });
       return;
     }
@@ -360,46 +566,193 @@ function selectNearestRailStation(candidates, baseUrl, originLat, originLon) {
  * Resolve actual station IDs
  * ============================================================
  */
+/*
+ * ============================================================
+ * Resolve actual station IDs
+ * ============================================================
+ */
 function resolveStationIds(baseUrl, nearest, callback) {
-  var url = baseUrl + "/api/v1/locations/suggest?q=" + encodeURIComponent(nearest.name);
-  console.log("resolveStationIds: Requesting station name");
+  var url = baseUrl +
+    "/api/v1/places/suggest?q=" +
+    encodeURIComponent(nearest.name);
+
+  console.log("resolveStationIds: Requesting place suggestion");
+
   var req = new XMLHttpRequest();
+
   req.open('GET', url, true);
+
   req.onload = function() {
     if (req.status !== 200) {
-      console.log("locations/suggest status=" + req.status);
+      console.log(
+        "places/suggest status=" +
+        req.status
+      );
       callback([]);
       return;
     }
+
     try {
       var res = JSON.parse(req.responseText);
-      var stations = res.stations || [];
+
+      /*
+       * ========================================================
+       * DIAGNOSTIC LOG - REMOVE BEFORE RELEASE
+       * ========================================================
+       * ASCII only. Do not log responseText or station names.
+       */
+
+      var topKeys = [];
+
+      for (var key in res) {
+        if (res.hasOwnProperty(key)) {
+          topKeys.push(key);
+        }
+      }
+
+      console.log(
+        "DIAG PLACE SUGGEST keys=" +
+        topKeys.join(",")
+      );
+
+      /*
+       * ========================================================
+       * END DIAGNOSTIC LOG
+       * ========================================================
+       */
+
+      var places = res.places || [];
+
+      if (!Array.isArray(places)) {
+        places = [];
+      }
+
+      var stationCount = 0;
+      var idCount = 0;
       var result = [];
       var seen = {};
 
-      for (var i = 0; i < stations.length; i++) {
-        var station = stations[i];
-        if (!station || station.kind !== "station" || !station.id) continue;
-        if (seen[station.id]) continue;
-        
-        seen[station.id] = true;
-        result.push({
-          id: station.id,
-          name: station.name || nearest.name,
-          feedName: station.feedName || ""
-        });
+      for (var i = 0; i < places.length; i++) {
+        var place = places[i];
+
+        if (!place || typeof place !== "object") {
+          continue;
+        }
+
+        if (place.kind !== "station") {
+          continue;
+        }
+
+        stationCount++;
+
+        if (!place.id) {
+          continue;
+        }
+
+        idCount++;
+
+        if (seen[place.id]) {
+          continue;
+        }
+
+        seen[place.id] = true;
+
+/*
+ * ========================================================
+ * DIAGNOSTIC LOG - REMOVE BEFORE RELEASE
+ * ========================================================
+ * The Transit API uses "endpoint" for route planning.
+ * Do not log station names or raw response text.
+ */
+
+if (DIAG_LOG) {
+  console.log(
+    "DIAG PLACE ID=" +
+    String(place.id || "").replace(
+      /[^A-Za-z0-9:._-]/g,
+      ""
+    )
+  );
+
+  console.log(
+    "DIAG PLACE endpoint=" +
+    String(place.endpoint || "").replace(
+      /[^A-Za-z0-9:._\/,-]/g,
+      ""
+    )
+  );
+}
+
+/*
+ * ========================================================
+ * END DIAGNOSTIC LOG
+ * ========================================================
+ */
+
+var routeEndpoint = place.endpoint || place.id;
+
+if (!routeEndpoint) {
+  continue;
+}
+
+if (seen[routeEndpoint]) {
+  continue;
+}
+
+seen[routeEndpoint] = true;
+
+result.push({
+  id: routeEndpoint,
+  name: place.name || nearest.name,
+  feedName: place.feedName || ""
+});
       }
-      console.log("resolveStationIds: station IDs=" + result.length);
+
+      /*
+       * ========================================================
+       * DIAGNOSTIC LOG - REMOVE BEFORE RELEASE
+       * ========================================================
+       */
+
+      console.log(
+        "DIAG PLACE SUGGEST places=" +
+        places.length +
+        " stations=" +
+        stationCount +
+        " ids=" +
+        idCount +
+        " result=" +
+        result.length
+      );
+
+      /*
+       * ========================================================
+       * END DIAGNOSTIC LOG
+       * ========================================================
+       */
+
+      console.log(
+        "resolveStationIds: station IDs=" +
+        result.length
+      );
+
       callback(result);
+
     } catch (e) {
-      console.log("resolveStationIds: JSON parse error");
+      console.log(
+        "places/suggest: JSON parse error"
+      );
       callback([]);
     }
   };
+
   req.onerror = function() {
-    console.log("resolveStationIds: Network Error");
+    console.log(
+      "places/suggest: Network Error"
+    );
     callback([]);
   };
+
   req.send();
 }
 
@@ -710,7 +1063,12 @@ function sendItineraryToPebble(itin) {
 
 	dict[alarmMinutesKey] = alarmMinutesBefore;
 
-  console.log("Sending itinerary: " + stationName + " " + depHour + ":" + (depMin < 10 ? "0" + depMin : depMin));
+  console.log(
+  "Sending itinerary: " +
+  depHour +
+  ":" +
+  (depMin < 10 ? "0" + depMin : depMin)
+);
 
   Pebble.sendAppMessage(dict, function() {}, function(e) {
     console.log("sendItineraryToPebble: Message failed");
