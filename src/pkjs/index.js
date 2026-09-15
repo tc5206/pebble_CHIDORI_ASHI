@@ -145,38 +145,37 @@ Pebble.addEventListener('appmessage', function(e) {
 function fetchTransitData() {
   console.log("fetchTransitData: Started");
   var settings = JSON.parse(localStorage.getItem('clay-settings') || '{}');
-	transitApiUrl = settings.TRANSIT_API_URL || 'https://api.transit.ls8h.com';
+  transitApiUrl = settings.TRANSIT_API_URL || 'https://api.transit.ls8h.com';
   destinationStationId = settings.DESTINATION_STATION_ID || 'scrape-jreast-keihin-tohoku:odpt.Station:JR-East.KeihinTohokuNegishi.Tokyo';
   arrivalSearchTime = settings.ARRIVAL_SEARCH_TIME || '25:05';
-  var configuredAlarmMinutes = parseInt( settings.ALARM_MINUTES_BEFORE, 10);
+  var configuredAlarmMinutes = parseInt(settings.ALARM_MINUTES_BEFORE, 10);
   if (isFinite(configuredAlarmMinutes) && configuredAlarmMinutes >= 0) {
-		alarmMinutesBefore = configuredAlarmMinutes;
+    alarmMinutesBefore = configuredAlarmMinutes;
   } else {
     alarmMinutesBefore = 30;
   }
-	
+
   console.log("fetchTransitData: Configuration loaded");
   if (!currentLocation) {
-		console.log("fetchTransitData: Requesting GPS position");
-		
-		navigator.geolocation.getCurrentPosition(
+    console.log("fetchTransitData: Requesting GPS position");
+
+    navigator.geolocation.getCurrentPosition(
       function(pos) {
         currentLocation = pos.coords;
         console.log("GPS Success: Lat=" + pos.coords.latitude + ", Lon=" + pos.coords.longitude);
-        findNearestRailStation( transitApiUrl );
+        findNearestRailStation(transitApiUrl);
       },
       function(err) {
         console.log("GPS Error code=" + err.code);
         currentItineraries = [];
         currentItinIndex = 0;
         sendDataToPebble({ station: "GPS Error", hour: -1, min: 0 });
-      },
-      { timeout: 15000, maximumAge: 60000 }
+      }, { timeout: 15000, maximumAge: 60000 }
     );
   } else {
     console.log("fetchTransitData: Using cached GPS position");
 
-    findNearestRailStation( transitApiUrl );
+    findNearestRailStation(transitApiUrl);
   }
 }
 
@@ -227,23 +226,23 @@ function findNearestRailStation(baseUrl) {
 
   console.log("Station search requests=" + probes.length);
   var candidates = [];
-		
-/*
- * ============================================================
- * DIAGNOSTIC LOG - REMOVE BEFORE RELEASE
- * ============================================================
- */
-diagTotalPlaces = 0;
-diagTotalStations = 0;
-diagTotalRejectedDistance = 0;
-diagTotalEmptyResponses = 0;
-diagTotalErrors = 0;
-/*
- * ============================================================
- * END DIAGNOSTIC LOG
- * ============================================================
- */
-	
+
+  /*
+   * ============================================================
+   * DIAGNOSTIC LOG - REMOVE BEFORE RELEASE
+   * ============================================================
+   */
+  diagTotalPlaces = 0;
+  diagTotalStations = 0;
+  diagTotalRejectedDistance = 0;
+  diagTotalEmptyResponses = 0;
+  diagTotalErrors = 0;
+  /*
+   * ============================================================
+   * END DIAGNOSTIC LOG
+   * ============================================================
+   */
+
   function processBatch(startIndex) {
     if (startIndex >= probes.length) {
       selectNearestRailStation(candidates, baseUrl, originLat, originLon);
@@ -267,56 +266,28 @@ diagTotalErrors = 0;
               if (!isFinite(stationLat) || !isFinite(stationLon)) continue;
 
               var distance = getDistanceMeters(originLat, originLon, stationLat, stationLon);
-/*
- * ============================================================
- * DIAGNOSTIC LOG - REMOVE BEFORE RELEASE
- * ============================================================
- */
-if (distance > SEARCH_RADIUS_METERS) {
-  diagTotalRejectedDistance++;
+              /*
+               * ============================================================
+               * DIAGNOSTIC LOG - REMOVE BEFORE RELEASE
+               * ============================================================
+               */
+              if (distance > SEARCH_RADIUS_METERS) {
+                diagTotalRejectedDistance++;
 
-  console.log(
-    "DIAG STATION rejected distance=" +
-    Math.round(distance) +
-    "m"
-  );
+                console.log(
+                  "DIAG STATION rejected distance=" +
+                  Math.round(distance) +
+                  "m"
+                );
 
-  continue;
-}
-/*
- * ============================================================
- * END DIAGNOSTIC LOG
- * ============================================================
- */
-
-/*
- * ============================================================
- * DIAGNOSTIC LOG - REMOVE BEFORE RELEASE
- * ============================================================
- *
- * IMPORTANT:
- * station name is intentionally NOT logged.
- *
-if (DIAG_LOG) {
-  console.log(
-    "DIAG STATION accepted distance=" +
-    Math.round(distance) +
-    "m" +
-    " lat=" +
-    stationLat.toFixed(5) +
-    " lon=" +
-    stationLon.toFixed(5) +
-    " id=" +
-    String(place.id || "").replace(/[^A-Za-z0-9:._-]/g, "")
-  );
-}
-/*
- * ============================================================
- * END DIAGNOSTIC LOG
- * ============================================================
- */
-
-							candidates.push({
+                continue;
+              }
+              /*
+               * ============================================================
+               * END DIAGNOSTIC LOG
+               * ============================================================
+               */
+              candidates.push({
                 reverseId: place.id || "",
                 name: place.name,
                 lat: stationLat,
@@ -387,7 +358,7 @@ function requestReversePlaces(baseUrl, lat, lon, callback) {
         places = [];
       }
 
-       /*
+      /*
        * ========================================================
        * DIAGNOSTIC LOG - REMOVE BEFORE RELEASE
        * ========================================================
@@ -486,12 +457,12 @@ function selectNearestRailStation(candidates, baseUrl, originLat, originLon) {
       diagTotalStations +
       " empty=" +
       diagTotalEmptyResponses +
-			" errors=" +
-			diagTotalErrors +
-			" rejected=" +
-			diagTotalRejectedDistance +
-			" candidates=" +
-			candidates.length
+      " errors=" +
+      diagTotalErrors +
+      " rejected=" +
+      diagTotalRejectedDistance +
+      " candidates=" +
+      candidates.length
     );
   }
   /*
@@ -657,55 +628,55 @@ function resolveStationIds(baseUrl, nearest, callback) {
 
         seen[place.id] = true;
 
-/*
- * ========================================================
- * DIAGNOSTIC LOG - REMOVE BEFORE RELEASE
- * ========================================================
- * The Transit API uses "endpoint" for route planning.
- * Do not log station names or raw response text.
- */
+        /*
+         * ========================================================
+         * DIAGNOSTIC LOG - REMOVE BEFORE RELEASE
+         * ========================================================
+         * The Transit API uses "endpoint" for route planning.
+         * Do not log station names or raw response text.
+         */
 
-if (DIAG_LOG) {
-  console.log(
-    "DIAG PLACE ID=" +
-    String(place.id || "").replace(
-      /[^A-Za-z0-9:._-]/g,
-      ""
-    )
-  );
+        if (DIAG_LOG) {
+          console.log(
+            "DIAG PLACE ID=" +
+            String(place.id || "").replace(
+              /[^A-Za-z0-9:._-]/g,
+              ""
+            )
+          );
 
-  console.log(
-    "DIAG PLACE endpoint=" +
-    String(place.endpoint || "").replace(
-      /[^A-Za-z0-9:._\/,-]/g,
-      ""
-    )
-  );
-}
+          console.log(
+            "DIAG PLACE endpoint=" +
+            String(place.endpoint || "").replace(
+              /[^A-Za-z0-9:._\/,-]/g,
+              ""
+            )
+          );
+        }
 
-/*
- * ========================================================
- * END DIAGNOSTIC LOG
- * ========================================================
- */
+        /*
+         * ========================================================
+         * END DIAGNOSTIC LOG
+         * ========================================================
+         */
 
-var routeEndpoint = place.endpoint || place.id;
+        var routeEndpoint = place.endpoint || place.id;
 
-if (!routeEndpoint) {
-  continue;
-}
+        if (!routeEndpoint) {
+          continue;
+        }
 
-if (seen[routeEndpoint]) {
-  continue;
-}
+        if (seen[routeEndpoint]) {
+          continue;
+        }
 
-seen[routeEndpoint] = true;
+        seen[routeEndpoint] = true;
 
-result.push({
-  id: routeEndpoint,
-  name: place.name || nearest.name,
-  feedName: place.feedName || ""
-});
+        result.push({
+          id: routeEndpoint,
+          name: place.name || nearest.name,
+          feedName: place.feedName || ""
+        });
       }
 
       /*
@@ -852,8 +823,7 @@ function queryPlanForStation(
 
       var journeys =
         res.journeys ||
-        res.itineraries ||
-        [];
+        res.itineraries || [];
 
       console.log(
         "plan journeys=" +
@@ -1050,25 +1020,25 @@ function sendItineraryToPebble(itin) {
   var hourKey = (typeof messageKeys !== 'undefined') ? messageKeys.KEY_HOUR : 'KEY_HOUR';
   var minKey = (typeof messageKeys !== 'undefined') ? messageKeys.KEY_MIN : 'KEY_MIN';
 
-	dict[stationKey] = stationName;
-	dict[typeKey] = lineName;
-	dict[destKey] = destName;
-	dict[hourKey] = depHour;
-	dict[minKey] = depMin;
+  dict[stationKey] = stationName;
+  dict[typeKey] = lineName;
+  dict[destKey] = destName;
+  dict[hourKey] = depHour;
+  dict[minKey] = depMin;
 
-	var alarmMinutesKey =
-			(typeof messageKeys !== 'undefined') ?
-			messageKeys.KEY_ALARM_MINUTES_BEFORE :
-	'KEY_ALARM_MINUTES_BEFORE';
+  var alarmMinutesKey =
+    (typeof messageKeys !== 'undefined') ?
+    messageKeys.KEY_ALARM_MINUTES_BEFORE :
+    'KEY_ALARM_MINUTES_BEFORE';
 
-	dict[alarmMinutesKey] = alarmMinutesBefore;
+  dict[alarmMinutesKey] = alarmMinutesBefore;
 
   console.log(
-  "Sending itinerary: " +
-  depHour +
-  ":" +
-  (depMin < 10 ? "0" + depMin : depMin)
-);
+    "Sending itinerary: " +
+    depHour +
+    ":" +
+    (depMin < 10 ? "0" + depMin : depMin)
+  );
 
   Pebble.sendAppMessage(dict, function() {}, function(e) {
     console.log("sendItineraryToPebble: Message failed");
@@ -1085,31 +1055,30 @@ function sendDataToPebble(data) {
 
   var stationKey =
     (typeof messageKeys !== 'undefined') ?
-      messageKeys.KEY_STATION :
-      'KEY_STATION';
+    messageKeys.KEY_STATION :
+    'KEY_STATION';
 
   var hourKey =
     (typeof messageKeys !== 'undefined') ?
-      messageKeys.KEY_HOUR :
-      'KEY_HOUR';
+    messageKeys.KEY_HOUR :
+    'KEY_HOUR';
 
   var minKey =
     (typeof messageKeys !== 'undefined') ?
-      messageKeys.KEY_MIN :
-      'KEY_MIN';
+    messageKeys.KEY_MIN :
+    'KEY_MIN';
 
   var alarmMinutesKey =
     (typeof messageKeys !== 'undefined') ?
-      messageKeys.KEY_ALARM_MINUTES_BEFORE :
-      'KEY_ALARM_MINUTES_BEFORE';
+    messageKeys.KEY_ALARM_MINUTES_BEFORE :
+    'KEY_ALARM_MINUTES_BEFORE';
 
   dict[stationKey] = data.station;
   dict[hourKey] = data.hour;
   dict[minKey] = data.min;
   dict[alarmMinutesKey] = alarmMinutesBefore;
 
-  Pebble.sendAppMessage( dict, function() {}, function() {}
-  );
+  Pebble.sendAppMessage(dict, function() {}, function() {});
 }
 
 /*
@@ -1182,16 +1151,13 @@ function addAlarmToTimeline(alarmUnixTime) {
     "time": alarmDate.toISOString(),
     "layout": {
       "type": "genericPin",
-      "title":
-        "終電" +
+      "title": "終電" +
         alarmMinutesBefore +
         "分前",
-      "body":
-        stationName +
+      "body": stationName +
         " → " +
         destName,
-      "tinyIcon":
-        "system://images/SCHEDULED_EVENT"
+      "tinyIcon": "system://images/SCHEDULED_EVENT"
     }
   };
 
@@ -1306,16 +1272,11 @@ function addCurrentTrainToTimeline() {
     }
   };
 
-	console.log("addCurrentTrainToTimeline: Inserting pin");
+  console.log("addCurrentTrainToTimeline: Inserting pin");
 
-	Pebble.insertTimelinePin(pin);
+  Pebble.insertTimelinePin(pin);
   sendTimelineResult(1);
-	
-/*Pebble.insertTimelinePin( pin,
-  function() { sendTimelineResult(1); },
-  function() { sendTimelineResult(0); }
-);*/
-	
+
 }
 
 /*
